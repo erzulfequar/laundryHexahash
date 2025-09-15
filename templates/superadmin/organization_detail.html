@@ -1,0 +1,106 @@
+{% extends "superadmin/layout.html" %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+
+    <!-- Sidebar -->
+    <div class="col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white fw-bold">
+          Organizations
+        </div>
+        <div class="list-group list-group-flush">
+          {% for org in all_organizations %}
+            <a href="{% url 'view_organization' org.id %}"
+               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center
+               {% if organization and org.id == organization.id %}active bg-primary text-white{% endif %}">
+              <span class="text-truncate" style="max-width: 140px;">{{ org.name|default:"(No Name)"|truncatechars:22 }}</span>
+              {% if org.is_approved %}
+                <span class="badge bg-success">✓</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">⏳</span>
+              {% endif %}
+            </a>
+          {% empty %}
+            <p class="text-muted p-2">No organizations found.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail Panel -->
+<div class="col-md-9">
+  {% if organization %}
+    <div class="card p-4 shadow-sm">
+      <!-- Company Name + Logo -->
+      <div class="d-flex align-items-center mb-4">
+        {% if organization.logo %}
+          <img src="{{ organization.logo.url }}" alt="Logo" class="me-3" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+        {% else %}
+          <div class="me-3 bg-secondary text-white d-flex justify-content-center align-items-center" style="width: 60px; height: 60px; border-radius: 8px;">N/A</div>
+        {% endif %}
+        <h4 class="mb-0 fw-bold">{{ organization.name }}</h4>
+      </div>
+
+      <!-- Organization Info -->
+      <table class="table table-striped">
+        <tr><th>Address</th><td>{{ organization.address }}</td></tr>
+        <tr><th>Phone</th><td>{{ organization.country_code }} {{ organization.phone }}</td></tr>
+        <tr><th>Email</th><td>{{ organization.email|default:"N/A" }}</td></tr>
+        <tr><th>WhatsApp</th><td>{{ organization.whatsapp|default:"None" }}</td></tr>
+        <tr><th>GST Number</th><td>{{ organization.gst_number|default:"N/A" }}</td></tr>
+        <tr><th>Created By</th><td>{{ organization.created_by.username }}</td></tr>
+        <tr>
+          <th>Status</th>
+          <td>
+            {% if organization.is_approved %}
+              <span class="badge bg-success px-3 py-1">Approved</span>
+            {% else %}
+              <span class="badge bg-warning text-dark px-3 py-1">Pending</span>
+            {% endif %}
+          </td>
+        </tr>
+        <tr><th>Created At</th><td>{{ organization.created_at|date:"F j, Y, g:i A" }}</td></tr>
+
+   <!-- Back Button -->
+
+{% if organization %}
+  <hr />
+  <h5 class="fw-bold">Access Plan</h5>
+  <table class="table table-bordered">
+    <tr><th>Allowed Branches</th><td>{{ organization.allowed_branches }}</td></tr>
+    <tr><th>Allowed Staff</th><td>{{ organization.allowed_staff }}</td></tr>
+    <tr><th>Start Date</th><td>{{ organization.plan_start_date|date:"F j, Y" }}</td></tr>
+    <tr><th>End Date</th><td>{{ organization.plan_end_date|date:"F j, Y" }}</td></tr>
+    <tr>
+      <th>Days Remaining</th>
+      <td>
+        {% if days_remaining is not None %}
+          {{ days_remaining }} day{{ days_remaining|pluralize }}
+        {% else %}
+          N/A
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+{% endif %}
+
+      </table>
+
+      <!-- Back Button -->
+      <div class="text-center">
+        <a href="{% url 'superadmin_dashboard' %}" class="btn btn-outline-secondary mt-3">← Back to Dashboard</a>
+      </div>
+    </div>
+  {% else %}
+    <div class="text-center mt-5">
+      <h5 class="text-muted">Please select an organization from the left panel to view details.</h5>
+    </div>
+  {% endif %}
+</div>
+
+
+  </div>
+</div>
+{% endblock %}

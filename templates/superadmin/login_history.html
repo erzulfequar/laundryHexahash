@@ -1,0 +1,35 @@
+{% extends 'superadmin/layout.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4">Organization Admin Login History</h3>
+
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Organization Name</th>
+                <th>Email</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for admin in orgadmins %}
+            <tr>
+                <td>{{ admin.username }}</td>
+                <td>{{ admin.organization.name }}</td>
+                <td>{{ admin.email }}</td>
+                <td>
+                    <a href="{% url 'orgadmin_logs' admin.id %}" class="btn btn-primary btn-sm">
+                        View Logs
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center">No organization admins found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends 'laundry/base.html' %}
+{% block content %}
+<h4 class="fw-bold mb-3">Invoices</h4>
+{% if request.user.is_superuser or request.user.is_org_admin %}
+  <form method="get" class="simple-branch-filter-form">
+    <label for="branch-select">Filter by Branch:</label>
+    <select name="branch_id" id="branch-select" onchange="this.form.submit()">
+      <option value="all" {% if not selected_branch_id or selected_branch_id == 'all' %}selected{% endif %}>
+        All Branches
+      </option>
+      {% for branch in branches %}
+        <option value="{{ branch.id }}" {% if selected_branch_id == branch.id|stringformat:"s" %}selected{% endif %}>
+          ID: {{ branch.id }} — {{ branch.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+{% endif %}
+</br>
+
+<!-- Filter + Search -->
+<div class="d-flex justify-content-between mb-3 flex-wrap">
+  <form method="get" class="me-2 mb-2">
+    <input type="text" name="q" value="{{ query }}" placeholder="Search by name, phone or invoice no..." class="form-control">
+  </form>
+
+  <div class="btn-group mb-2">
+    <a href="{% url 'invoice_list' %}" class="btn btn-outline-secondary {% if not status_filter %}active{% endif %}">All</a>
+    <a href="?status=paid" class="btn btn-outline-success {% if status_filter == 'paid' %}active{% endif %}">Paid</a>
+    <a href="?status=pending" class="btn btn-outline-warning {% if status_filter == 'pending' %}active{% endif %}">Pending</a>
+  </div>
+</div>
+
+
+
+<!-- Invoice Table -->
+<table class="table table-bordered table-hover align-middle">
+  <thead class="table-light">
+    <tr>
+      <th>Invoice #</th>
+      <th>Customer</th>
+      <th>Date</th>
+      <th>Amount</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for invoice in invoices %}
+    <tr>
+      <td>{{ invoice.branch.code }}-LPO{{ invoice.branch_order_number }}</td>
+
+      <td>{{ invoice.customer.name }}</td>
+      <td>{{ invoice.created_at|date:"d-m-Y h:i A" }}</td>
+      <td>₹{{ invoice.total_amount }}</td>
+      <td>
+        <form method="post" class="status-form" data-url="{% url 'update_invoice_status' invoice.id %}">
+          {% csrf_token %}
+          <select name="is_paid" class="form-select form-select-sm">
+            <option value="paid" {% if invoice.is_paid %}selected{% endif %}>Paid</option>
+            <option value="pending" {% if not invoice.is_paid %}selected{% endif %}>Pending</option>
+          </select>
+        </form>
+      </td>
+      <td>
+        <a href="{% url 'invoice_view' invoice.id %}" target="_blank" class="btn btn-sm btn-primary">
+          <i class="fas fa-print"></i> Print
+        </a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="6">No invoices found.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- AJAX Script -->
+<script>
+  document.querySelectorAll('.status-form select').forEach(select => {
+    select.addEventListener('change', function () {
+      const form = this.closest('.status-form');
+      const url = form.dataset.url;
+      const formData = new FormData(form);
+
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (!data.success) {
+          alert('Failed to update status');
+        }
+      })
+      .catch(() => alert('Error communicating with server'));
+    });
+  });
+</script>
+{% endblock %}

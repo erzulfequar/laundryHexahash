@@ -1,0 +1,41 @@
+{% extends 'superadmin/layout.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h3 class="mb-4">Manage Organizations</h3>
+  <table class="table table-bordered table-hover">
+    <thead class="table-light">
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for org in organizations %}
+      <tr>
+        <td>{{ org.name }}</td>
+        <td>{{ org.email }}</td>
+        <td>
+          {% if org.is_approved %}
+            <span class="badge bg-success">Approved</span>
+          {% else %}
+            <span class="badge bg-warning text-dark">Pending</span>
+          {% endif %}
+        </td>
+        <td>{{ org.created_at|date:"Y-m-d" }}</td>
+        <td>
+          <a  href="{% url 'manage_user_detail' org.id %}" class="btn btn-sm btn-outline-primary">👁️ View / Manage</a>
+
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="text-center text-muted">No organizations found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

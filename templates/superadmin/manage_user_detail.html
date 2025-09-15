@@ -1,0 +1,106 @@
+{% extends 'superadmin/layout.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h4>{{ organization.name }} ({{ organization.org_id }})</h4>
+  <hr>
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <p><strong>Email:</strong> {{ organization.email }}</p>
+      <p><strong>Phone:</strong> {{ organization.country_code }} {{ organization.phone }}</p>
+    </div>
+    <div class="col-md-6">
+      <p><strong>Status:</strong>
+        {% if organization.is_approved %}
+          <span class="badge bg-success">Approved</span>
+        {% else %}
+          <span class="badge bg-warning text-dark">Pending</span>
+        {% endif %}
+      </p>
+      <p><strong>Created:</strong> {{ organization.created_at }}</p>
+    </div>
+  </div>
+
+  <p><strong>Validity:</strong>
+    {% if organization.plan_start_date and organization.plan_end_date %}
+      {{ organization.plan_start_date }} to {{ organization.plan_end_date }}
+      <span class="text-muted">
+        {% if organization.days_remaining %}
+          ({{ organization.days_remaining }} days left)
+        {% endif %}
+      </span>
+    {% else %}
+      Not set
+    {% endif %}
+  </p>
+
+ <p><strong>Allowed Branches:</strong>
+  {% if organization.allowed_branches > 0 %}
+    {{ organization.allowed_branches }}
+  {% else %}
+    N/A
+  {% endif %}
+</p>
+
+<p><strong>Allowed Staff:</strong>
+  {% if organization.allowed_staff > 0 %}
+    {{ organization.allowed_staff }}
+  {% else %}
+    N/A
+  {% endif %}
+</p>
+
+
+  <hr>
+  <h5 class="mt-4">🛠️ Assign / Update Plan</h5>
+
+  {% if organization.plan_start_date or organization.allowed_branches or organization.allowed_staff %}
+    <div class="mb-3">
+      <button type="button" class="btn btn-warning" id="editToggleBtn">✏️ Edit Plan</button>
+    </div>
+  {% endif %}
+
+  <form method="POST" action="{% url 'assign_org_limits' organization.id %}">
+    {% csrf_token %}
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label>Allowed Branches</label>
+        <input type="number" name="branches" value="{{ organization.allowed_branches }}" class="form-control"
+        {% if organization.plan_start_date or organization.allowed_branches or organization.allowed_staff %}readonly{% endif %}>
+      </div>
+      <div class="col-md-6">
+        <label>Allowed Staff</label>
+        <input type="number" name="staff" value="{{ organization.allowed_staff }}" class="form-control"
+        {% if organization.plan_start_date or organization.allowed_branches or organization.allowed_staff %}readonly{% endif %}>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label>Start Date</label>
+        <input type="date" name="start" value="{{ organization.plan_start_date }}" class="form-control"
+        {% if organization.plan_start_date or organization.allowed_branches or organization.allowed_staff %}readonly{% endif %}>
+      </div>
+      <div class="col-md-6">
+        <label>End Date</label>
+        <input type="date" name="end" value="{{ organization.plan_end_date }}" class="form-control"
+        {% if organization.plan_start_date or organization.allowed_branches or organization.allowed_staff %}readonly{% endif %}>
+      </div>
+    </div>
+
+    <button class="btn btn-primary">💾 Save Plan</button>
+  </form>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const toggleBtn = document.getElementById("editToggleBtn");
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", function() {
+        const inputs = document.querySelectorAll("input[name='branches'], input[name='staff'], input[name='start'], input[name='end']");
+        inputs.forEach(input => input.removeAttribute("readonly"));
+        toggleBtn.disabled = true;
+      });
+    }
+  });
+</script>
+{% endblock %}

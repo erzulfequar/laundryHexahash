@@ -1,0 +1,803 @@
+{% extends 'laundry/base.html' %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center p-3 px-4 mb-4 rounded-4 shadow-sm" style="
+  background: linear-gradient(to right, #fdfdfd, #f4f7fe);
+  border-left: 4px solid #6366f1;
+  border-radius: 16px;
+  min-height: 90px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+">
+
+  <div class="d-flex align-items-center">
+    {% if organization.logo %}
+      <img src="{{ organization.logo.url }}" alt="Logo" style="height: 80px; width: 80px; object-fit: cover; border-radius: 16px; border: 2px solid #ddd; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-right: 16px;">
+    {% endif %}
+
+    <div>
+      <h2 class="fw-bold mb-1" style="font-size: 1.8rem; color: #222;">{{ organization.name }}</h2>
+      <div style="font-size: 15px; color: #555;">Welcome to your laundry dashboard</div>
+    </div>
+  </div>
+
+  <div class="text-end d-none d-md-block">
+    <div class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fs-6 shadow-sm">
+      🏷️ Active Plan
+    </div>
+    <div style="font-size: 14px; color: #888;" class="mt-1">Valid till: {{ organization.plan_end_date|date:"M d, Y" }}</div>
+  </div>
+
+</div>
+
+
+<div class="container-fluid">
+  <div class="row">
+    {% comment %} LEFT SIDE START {% endcomment %}
+    <div class="col-lg-6 mb-4">
+      <div class="card p-4 shadow-sm border-0">
+        <h4 class="fw-bold mb-3">Customer Information</h4>
+        <div class="row g-3">
+          <!-- Add New Customer -->
+          <div class="col-md-6">
+            <div class="border rounded p-3">
+              <h6 class="fw-bold mb-3"><i class="fas fa-user-plus me-2"></i>Add New Customer</h6>
+              <form method="POST" id="customerForm" autocomplete="off">
+                {% csrf_token %}
+                Name:<input type="text" class="form-control mb-2" id="custName" name="name" required>
+                Phone:
+<input type="text"
+       inputmode="numeric"
+       pattern="[0-9]{10}"
+       class="form-control mb-2"
+       id="custPhone"
+       name="phone"
+       maxlength="10"
+       minlength="10"
+       required
+       oninput="this.value = this.value.replace(/\D/g, '')">
+                Email:<input type="email" class="form-control mb-2" id="custEmail" name="email">
+                <button type="submit" class="btn btn-dark w-100 mt-2">
+                  <i class="fas fa-user-plus me-1"></i> Add Customer
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Select Existing Customer -->
+          <div class="col-md-6">
+            <div class="border rounded p-3">
+              <h6 class="fw-bold mb-3"><i class="fas fa-search me-2"></i>Select Existing Customer</h6>
+              <select id="customerSelect" class="form-select">
+                <option disabled selected>Select customer</option>
+                {% for customer in customers %}
+                  <option
+                    value="{{ customer.id }}"
+                    data-name="{{ customer.name }}"
+                    data-phone="{{ customer.phone }}"
+                    data-email="{{ customer.email }}">
+                    {{ customer.name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- ✅ Article Selection Section -->
+        <hr class="my-4">
+        <h5 class="fw-bold mb-3">🧺 Select Article</h5>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <label for="articleCategoryFilter" class="mb-0">Filter by Category:</label>
+          <select id="articleCategoryFilter" class="form-select form-select-sm w-auto">
+            <option value="All">All</option>
+            {% for cat in categories %}
+              <option value="{{ cat }}">{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="row" id="articleContainer" style="max-height: 300px; overflow-y: auto;">
+          {% for article in articles %}
+          <div class="col-4 mb-3 article-card" data-category="{{ article.category }}">
+            <div class="card h-100 text-center article-select-btn"
+                data-id="{{ article.id }}"
+                data-name="{{ article.name }}"
+                data-iron="{{ article.only_iron_price }}"
+                data-wash="{{ article.with_wash_price }}"
+                data-dryclean="{{ article.dry_clean_price|default:0 }}"
+                {% if article.image %}
+  data-image="{{ article.image.url }}"
+{% else %}
+  data-image=""
+{% endif %}
+
+            >
+              {% if article.image %}
+              <img src="{{ article.image.url }}" class="card-img-top p-2" style="height: 70px; object-fit: contain;">
+              {% else %}
+              <div class="card-img-top p-3 text-muted">No Image</div>
+              {% endif %}
+              <div class="card-body p-2">
+                <small class="fw-semibold">{{ article.name }}</small>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- ✅ Selected Items Section -->
+        <div class="mt-4">
+          <h6 class="fw-bold mb-2">🧾 Selected Items</h6>
+          <ul class="list-group" id="selectedItemsList"></ul>
+          <button class="btn btn-success mt-3 w-100" onclick="sendToOrder()">
+            <i class="fas fa-share-square me-1"></i> Send to Order
+          </button>
+        </div>
+ <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    let selectedArticle = {
+      id: null,
+      name: '',
+      image: '',
+      iron: 0,
+      wash: 0,
+      dryclean: 0,
+    };
+
+    // 🔄 Filter articles by category
+    const categoryFilter = document.getElementById('articleCategoryFilter');
+    if (categoryFilter) {
+      categoryFilter.addEventListener('change', function () {
+        const selected = this.value.toLowerCase();
+        document.querySelectorAll('#articleContainer .article-card').forEach(card => {
+          const category = card.getAttribute('data-category').toLowerCase();
+          card.style.display = (selected === 'all' || selected === category) ? 'block' : 'none';
+        });
+      });
+    }
+
+    // 🧺 Article click → open modal
+    document.querySelectorAll('.article-select-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        selectedArticle.id = this.getAttribute('data-id');
+        selectedArticle.name = this.getAttribute('data-name');
+        selectedArticle.image = this.getAttribute('data-image');
+        selectedArticle.iron = parseFloat(this.getAttribute('data-iron'));
+        selectedArticle.wash = parseFloat(this.getAttribute('data-wash'));
+        selectedArticle.dryclean = parseFloat(this.getAttribute('data-dryclean'));
+
+        document.getElementById('modalArticleName').textContent = selectedArticle.name;
+        const imgEl = document.getElementById('modalArticleImage');
+        imgEl.src = selectedArticle.image || '';
+        imgEl.style.display = selectedArticle.image ? 'block' : 'none';
+
+        document.getElementById('modalArticleQty').value = '';
+        document.getElementById('onlyIron').checked = true;
+
+        const modal = new bootstrap.Modal(document.getElementById('articleQtyModal'));
+        modal.show();
+      });
+    });
+
+    // ➕ Confirm Add / Update
+    window.confirmAddArticle = function () {
+      const qty = parseInt(document.getElementById('modalArticleQty').value);
+      const serviceType = document.querySelector('input[name="serviceType"]:checked').value;
+
+      if (!qty || qty <= 0) {
+        alert('Please enter a valid quantity.');
+        return;
+      }
+
+      let unitPrice = 0;
+      let serviceLabel = '';
+
+      if (serviceType === 'wash') {
+        unitPrice = selectedArticle.wash;
+        serviceLabel = 'With Wash';
+      } else if (serviceType === 'iron') {
+        unitPrice = selectedArticle.iron;
+        serviceLabel = 'Without Wash';
+      } else if (serviceType === 'dryclean') {
+        unitPrice = selectedArticle.dryclean;
+        serviceLabel = 'Dry Clean';
+      }
+
+      const totalPrice = qty * unitPrice;
+      const itemKey = `${selectedArticle.id}_${serviceType}`;
+      const list = document.getElementById('selectedItemsList');
+      let existingItem = list.querySelector(`li[data-key="${itemKey}"]`);
+
+      if (existingItem) {
+        const badge = existingItem.querySelector('.qty-badge');
+        let currentQty = parseInt(badge.getAttribute('data-qty'));
+        let newQty = currentQty + qty;
+        badge.setAttribute('data-qty', newQty);
+        badge.textContent = `Qty: ${newQty} | ₹${(newQty * unitPrice).toFixed(2)}`;
+      } else {
+        const li = document.createElement('li');
+        li.setAttribute('data-key', itemKey);
+        li.setAttribute('data-service', serviceType);
+        li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = `${selectedArticle.name} (${serviceLabel})`;
+
+        const controls = document.createElement('span');
+
+        const qtyBadge = document.createElement('span');
+        qtyBadge.className = 'badge bg-success rounded-pill me-2 qty-badge';
+        qtyBadge.setAttribute('data-qty', qty);
+        qtyBadge.textContent = `Qty: ${qty} | ₹${totalPrice.toFixed(2)}`;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn btn-sm btn-outline-danger';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.addEventListener('click', function () {
+          const removeModal = new bootstrap.Modal(document.getElementById('removeConfirmModal'));
+          const confirmBtn = document.getElementById('confirmRemoveBtn');
+
+          const newConfirmBtn = confirmBtn.cloneNode(true);
+          confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+          newConfirmBtn.addEventListener('click', function () {
+            li.remove();
+            removeModal.hide();
+          });
+
+          removeModal.show();
+        });
+
+        controls.appendChild(qtyBadge);
+        controls.appendChild(removeBtn);
+
+        li.appendChild(nameSpan);
+        li.appendChild(controls);
+        list.appendChild(li);
+      }
+
+      const modalEl = document.getElementById('articleQtyModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal.hide();
+    };
+
+    // 🧾 Update Invoice Tables and Summary
+    window.sendToOrder = function () {
+      const list = document.getElementById('selectedItemsList');
+      const ironingTableBody = document.querySelector('#ironingItemsTable tbody');
+      const drycleanTableBody = document.querySelector('#drycleanItemsTable tbody');
+      ironingTableBody.innerHTML = '';
+      drycleanTableBody.innerHTML = '';
+
+      let ironingTotal = 0, ironingCount = 0;
+      let drycleanTotal = 0, drycleanCount = 0;
+
+      list.querySelectorAll('li').forEach(item => {
+        const serviceType = item.getAttribute('data-service');
+        const nameText = item.querySelector('span').textContent;
+        const qtyBadge = item.querySelector('.qty-badge');
+        const qty = parseInt(qtyBadge.getAttribute('data-qty'));
+        const priceText = qtyBadge.textContent;
+        const amountMatch = priceText.match(/₹([\d.]+)/);
+        const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${nameText}</td>
+          <td>${qty}</td>
+          <td>₹${amount.toFixed(2)}</td>
+          <td><button class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()">×</button></td>
+        `;
+
+        if (serviceType === 'dryclean' ) {
+          drycleanTableBody.appendChild(tr);
+          drycleanTotal += amount;
+          drycleanCount++;
+        } else if (serviceType === 'iron' || serviceType === 'wash') {
+          ironingTableBody.appendChild(tr);
+          ironingTotal += amount;
+          ironingCount++;
+        }
+      });
+
+      const ironingSummary = document.querySelector('#ironingSummaryLine');
+      if (ironingSummary) {
+        ironingSummary.textContent = `Ironing ${ironingCount} items = ₹${ironingTotal.toFixed(2)}`;
+      }
+
+      const drycleanSummary = document.querySelector('#drycleanSummaryLine');
+      if (drycleanSummary) {
+        drycleanSummary.textContent = `Dry Clean ${drycleanCount} items = ₹${drycleanTotal.toFixed(2)}`;
+      }
+
+      updateFromSelectedItemsList(); // <- your existing logic to refresh global arrays
+      calculateTotal(); // <- your existing logic to recalculate total amount
+    };
+  });
+</script>
+
+
+
+
+
+      </div>
+
+
+
+
+    </div>
+
+    {% comment %} RIGHT SIDE START {% endcomment %}
+    <div class="card p-4 shadow-sm mt-2" style="max-width:470px;">
+      <h5 class="mb-4 text-primary">Order Processing</h5>
+
+      <div class="mb-4">
+        <h6>Selected Customer</h6>
+        <p><strong id="selectedName">--</strong></p>
+        <p class="text-muted mb-1">📞 <span id="selectedPhone">--</span></p>
+        <p class="text-muted">📧 <span id="selectedEmail">--</span></p>
+      </div>
+      <hr>
+
+     <div class="mb-4">
+  <h6>Washing Details</h6>
+  <input type="number" id="washingWeight" class="form-control" placeholder="Enter weight in kg" min="0" oninput="updateWashingRate()">
+  <small>Rate: <strong id="washingRate" class="text-primary">₹50/kg</strong></small>
+</div>
+<hr>
+
+  <!-- ✅ Updated Ironing Items Section -->
+<div class="mt-4">
+  <h6 class="fw-bold mb-2">🧺 Selected Articles for Ironing</h6>
+
+  <table class="table table-bordered mt-2" id="ironingItemsTable">
+    <thead class="table-light">
+      <tr>
+        <th>Article</th>
+        <th>Qty</th>
+        <th>Amount</th>
+        <th></th> <!-- For remove button -->
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <p class="text-end fw-bold mt-2" id="ironingSummaryLine">Ironing 0 items = ₹0.00</p>
+</div>
+      <!-- ✅ Dry Clean Items Section -->
+<div class="mt-4">
+  <h6 class="fw-bold mb-2">🧴 Selected Articles for Dry Clean</h6>
+
+  <table class="table table-bordered mt-2" id="drycleanItemsTable">
+    <thead class="table-light">
+      <tr>
+        <th>Article</th>
+        <th>Qty</th>
+        <th>Amount</th>
+        <th></th> <!-- For remove button -->
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <p class="text-end fw-bold mt-2" id="drycleanSummaryLine">Dry Clean 0 items = ₹0.00</p>
+</div>
+
+
+
+      <div class="mb-3">
+        <label for="paymentMethod" class="form-label">Payment Method</label>
+        <select id="paymentMethod" class="form-select">
+          <option value="Cash">Cash</option>
+          <option value="UPI">UPI</option>
+          <option value="Card">Card</option>
+        </select>
+      </div>
+
+      <div class="mb-4 p-2 border border-success border-1 rounded" style="background-color: #f0fdf4;">
+        <h6 class="text-muted">Order Summary</h6>
+        <div class="d-flex justify-content-between">
+          <span>🧺 Washing</span>
+          <span><span id="washingKg">0</span> kg × ₹<span id="ratePerKg">50</span> = ₹<span id="washingAmount">0.00</span></span>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span>🧼 Ironing</span>
+          <span><span id="ironingCount">0</span> items  = ₹<span id="ironingAmount">0.00</span></span>
+        </div>
+           <div class="d-flex justify-content-between">
+  <span>🧴 Dry Clean</span>
+  <span><span id="drycleanCount">0</span> items  = ₹<span id="drycleanAmount">0.00</span></span>
+</div>
+        <hr>
+        <div class="d-flex justify-content-between fw-bold fs-5">
+          <span>Total Amount</span>
+          <span>₹<span id="totalAmount">0.00</span></span>
+        </div>
+      </div>
+
+
+
+      <button class="btn btn-primary w-100" onclick="showInvoiceOnly()">Create Order & Generate Invoice</button>
+    </div>
+  </div>
+
+  <!-- ✅ Invoice Preview Section -->
+  <div id="invoicePreview" class="mt-5" style="display:none;">
+{% include 'shared/invoice.html' with today_date=today_date current_time=current_time invoice_number=invoice_number branch=request.user.branch %}
+
+
+  </div>
+
+<!-- ✅ Article Quantity Modal -->
+<div class="modal fade" id="articleQtyModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Select Quantity</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="modalArticleImage" class="img-thumbnail mb-3" style="max-height: 100px; display: none;">
+
+        <h6 id="modalArticleName"></h6>
+
+        <!-- 🔘 Service Type -->
+        <div class="form-check form-check-inline mt-2">
+          <input class="form-check-input" type="radio" name="serviceType" id="onlyIron" value="iron" checked>
+          <label class="form-check-label" for="onlyIron">Without Wash</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="serviceType" id="withWash" value="wash">
+          <label class="form-check-label" for="withWash">With Wash</label>
+        </div>
+        <div class="form-check form-check-inline">
+  <input class="form-check-input" type="radio" name="serviceType" id="dryClean" value="dryclean">
+  <label class="form-check-label" for="dryClean">Dry Clean</label>
+</div>
+
+        <input type="number" id="modalArticleQty" class="form-control mt-3" placeholder="Enter quantity" min="1">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="confirmAddArticle()">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🧾 Remove Confirmation Modal -->
+<div class="modal fade" id="removeConfirmModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body text-center">
+        <p class="mb-3">Are you sure you want to remove this item?</p>
+        <div class="d-flex justify-content-around">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-danger btn-sm" id="confirmRemoveBtn">Remove</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ✅ External JS (from your working script) -->
+
+
+  <script>
+  const WASHING_RATE_BASE = 50;
+  const WASHING_RATE_DISCOUNT = 45;
+  let ironingItems = [];
+  let drycleanItems = [];
+
+function updateFromSelectedItemsList() {
+  ironingItems = [];
+  drycleanItems = [];
+
+  const selectedItems = document.querySelectorAll('#selectedItemsList li');
+
+  selectedItems.forEach(li => {
+    const name = li.querySelector('span:first-child')?.textContent || '';
+    const badge = li.querySelector('.qty-badge');
+    const qty = parseInt(badge?.getAttribute('data-qty')) || 0;
+
+    const priceText = badge?.textContent || '';
+    const match = priceText.match(/₹(\d+(\.\d+)?)/);
+    const totalPrice = match ? parseFloat(match[1]) : 0;
+    const rate = qty ? parseFloat((totalPrice / qty).toFixed(2)) : 0;
+
+    const service = li.getAttribute('data-service'); // ✅ Get service directly
+
+    if (name && qty > 0) {
+      const cleanedName = name.trim().replace(/\(.*\)/, '').trim(); // e.g., remove "(Dry Clean)" or "(Without Wash)"
+      if (service === 'dryclean') {
+        drycleanItems.push({ article: cleanedName, qty, rate });
+      } else if (service === 'iron'|| service === 'wash') {
+        var with_wash = name.includes('Without Wash') ? false : true;
+        ironingItems.push({ article: cleanedName, qty, rate, with_wash : with_wash });
+      }
+    }
+  });
+
+  renderServiceItemsList();
+  calculateTotal();
+}
+
+
+  function renderServiceItemsList() {
+    const list = document.getElementById("ironingList");
+    if (!list) return;
+    list.innerHTML = "";
+
+    // Render ironing items
+    ironingItems.forEach((item, i) => {
+      const amount = item.qty * item.rate;
+      list.innerHTML += `<tr>
+        <td>Ironing - ${item.article}</td>
+        <td>${item.qty}</td>
+        <td>₹${amount.toFixed(2)}</td>
+        <td><button class='btn btn-sm btn-danger' onclick='removeItem("ironing", ${i})'>Remove</button></td>
+      </tr>`;
+    });
+
+    // Render dryclean items
+    drycleanItems.forEach((item, i) => {
+      const amount = item.qty * item.rate;
+      list.innerHTML += `<tr>
+        <td>Dry Clean - ${item.article}</td>
+        <td>${item.qty}</td>
+        <td>₹${amount.toFixed(2)}</td>
+        <td><button class='btn btn-sm btn-danger' onclick='removeItem("dryclean", ${i})'>Remove</button></td>
+      </tr>`;
+    });
+  }
+
+  function removeItem(type, index) {
+    if (type === "ironing") {
+      ironingItems.splice(index, 1);
+    } else if (type === "dryclean") {
+      drycleanItems.splice(index, 1);
+    }
+    renderServiceItemsList();
+    calculateTotal();
+  }
+
+  function calculateTotal() {
+    const weight = parseFloat(document.getElementById("washingWeight")?.value || 0);
+    const rate = weight > 2.99 ? WASHING_RATE_DISCOUNT : WASHING_RATE_BASE;
+    const washingAmount = weight * rate;
+    const ironingAmount = ironingItems.reduce((sum, item) => sum + item.qty * item.rate, 0);
+    const drycleanAmount = drycleanItems.reduce((sum, item) => sum + item.qty * item.rate, 0);
+
+    document.getElementById("washingKg").innerText = weight;
+    document.getElementById("ratePerKg").innerText = rate;
+    document.getElementById("washingAmount").innerText = washingAmount.toFixed(2);
+    document.getElementById("ironingAmount").innerText = ironingAmount.toFixed(2);
+    document.getElementById("ironingCount").innerText = ironingItems.reduce((sum, item) => sum + item.qty, 0);
+    document.getElementById("drycleanAmount").innerText = drycleanAmount.toFixed(2);
+    document.getElementById("drycleanCount").innerText = drycleanItems.reduce((sum, item) => sum + item.qty, 0);
+    document.getElementById("totalAmount").innerText = (washingAmount + ironingAmount + drycleanAmount).toFixed(2);
+  }
+
+
+  function updateRightPanel(name, phone, email) {
+    document.getElementById("selectedName").innerText = name;
+    document.getElementById("selectedPhone").innerText = phone;
+    document.getElementById("selectedEmail").innerText = email;
+  }
+  window.showInvoiceOnly = function () {
+    const name = document.getElementById("selectedName").innerText;
+    const phone = document.getElementById("selectedPhone").innerText;
+    const email = document.getElementById("selectedEmail").innerText;
+    const weight = parseFloat(document.getElementById("washingWeight").value) || 0;
+    const rate = weight > 2.99 ? WASHING_RATE_DISCOUNT : WASHING_RATE_BASE;
+    const washingAmt = weight * rate;
+    let subtotal = 0;
+
+    let ironingAmt = 0;
+    let ironingRowsHtml = '';
+    let rowCount = 1;
+    let invoiceRowsHtml = "";
+    if (weight && weight > 0) {
+
+       invoiceRowsHtml += `
+          <tr>
+            <td>${rowCount++}</td>
+            <td>Washing</td>
+            <td>${weight} kg</td>
+            <td>₹${rate}/kg</td>
+             <td>₹${washingAmt.toFixed(2)}</td>
+          </tr>
+        `;
+        subtotal += washingAmt;
+      }
+  let drycleanAmt = 0;
+  if (drycleanItems && drycleanItems.length > 0) {
+    const groupedDryclean = {};
+
+    drycleanItems.forEach(item => {
+      const key = `${item.article}`.trim();
+      if (!groupedDryclean[key]) {
+        groupedDryclean[key] = { qty: 0, rate: item.rate || 0 };
+      }
+      groupedDryclean[key].qty += item.qty;
+    });
+
+    Object.entries(groupedDryclean).forEach(([article, data]) => {
+      const itemTotal = data.qty * data.rate;
+      drycleanAmt += itemTotal;
+
+      invoiceRowsHtml += `
+        <tr>
+          <td>${rowCount++}</td>
+          <td>Dry Clean (${article})</td>
+          <td>${data.qty}</td>
+          <td>₹${data.rate}</td>
+          <td>₹${itemTotal.toFixed(2)}</td>
+        </tr>
+      `;
+    });
+  }
+
+
+    if (ironingItems.length > 0) {
+      const groupedIroning = {};
+
+      // Group ironing items
+      ironingItems.forEach(item => {
+        console.log(item);
+        const key = `${item.article}`.trim();
+        if (!groupedIroning[key]) {
+          groupedIroning[key] = { qty: 0, rate: item.rate};
+        }
+        groupedIroning[key].qty += item.qty;
+      });
+
+
+      // Create separate row for each unique ironing item
+      Object.entries(groupedIroning).forEach(([article, data]) => {
+        const itemTotal = data.qty * data.rate;
+        ironingAmt += itemTotal;
+
+        invoiceRowsHtml += `
+          <tr>
+            <td>${rowCount++}</td>
+            <td>Ironing (${article})</td>
+            <td>${data.qty}</td>
+            <td>₹${data.rate}</td>
+            <td>₹${itemTotal.toFixed(2)}</td>
+          </tr>
+        `;
+      });
+    }
+
+  const total = washingAmt + ironingAmt + drycleanAmt;
+
+
+    // Inject data into invoice HTML
+    document.getElementById("invName").innerText = name;
+    document.getElementById("invPhone").innerText = phone;
+    document.getElementById("invEmail").innerText = email;
+
+    const paymentMethod = document.getElementById("paymentMethod").value || "Cash";
+    const paidMethods = ["UPI", "Online", "Card"];
+    const paymentStatus = paidMethods.includes(paymentMethod) ? "Paid" : "Pending";
+
+    document.getElementById("invPaymentMethod").innerText = `Payment Method: ${paymentMethod}`;
+    document.getElementById("invPaymentStatus").innerText = `Payment Status: ${paymentStatus}`;
+    document.getElementById("invoiceTableBody").innerHTML = invoiceRowsHtml;
+
+    document.getElementById("invTotal").innerText = total.toFixed(2);
+    document.getElementById("invSubtotal").innerText = total.toFixed(2);
+
+    const now = new Date();
+    const date = now.toLocaleDateString("en-IN");
+    const time = now.toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' });
+
+    document.getElementById("invDate").innerText = ` ${date}`;
+    document.getElementById("invTime").innerText = ` ${time}`;
+    document.getElementById("invoicePreview").style.display = 'block';
+
+    const selectedOption = document.getElementById("customerSelect").selectedOptions[0];
+    const customerId = selectedOption ? selectedOption.value : null;
+
+    fetch("/save-order/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        customer_id: customerId,
+        weight: weight,
+        ironing_items: ironingItems,
+        dryclean_items: drycleanItems,
+        total_amount: total,
+        status: paymentStatus
+      })
+    }).then(res => res.json())
+      .then(data => {
+        if (!data.success) {
+          alert("Failed to save order: " + (data.error || "Unknown error"));
+        }
+      });
+  }
+
+  // Add customer to DB via AJAX and update UI
+  const customerForm = document.getElementById("customerForm");
+  if (customerForm) {
+    customerForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const name = document.getElementById("custName").value.trim();
+      const phone = document.getElementById("custPhone").value.trim();
+      const email = document.getElementById("custEmail").value.trim();
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+      if (!name || !phone) {
+        alert("Please enter customer name and phone.");
+        return;
+      }
+
+      fetch("/home/", {
+        method: "POST",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRFToken": csrfToken,
+        },
+        body: new URLSearchParams({ name, phone, email })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === "success") {
+            const select = document.getElementById("customerSelect");
+            let option = [...select.options].find(opt => opt.value == data.id);
+            if (!option) {
+              option = document.createElement("option");
+              option.value = data.id;
+              option.textContent = data.name;
+              option.dataset.name = data.name;
+              option.dataset.phone = data.phone;
+              option.dataset.email = data.email;
+              select.appendChild(option);
+            }
+            select.value = data.id;
+            updateRightPanel(data.name, data.phone, data.email);
+            customerForm.reset();
+          } else {
+            alert("Failed to add customer: " + (data.message || "Unknown error"));
+          }
+        })
+        .catch(err => alert("Error adding customer: " + err));
+    });
+  }
+
+  const customerSelect = document.getElementById("customerSelect");
+  if (customerSelect) {
+    customerSelect.addEventListener("change", function () {
+      const selected = this.selectedOptions[0];
+      const name = selected.dataset.name;
+      const phone = selected.dataset.phone;
+      const email = selected.dataset.email;
+      updateRightPanel(name, phone, email);
+    });
+  }
+
+      function updateWashingRate() {
+      const weightInput = document.getElementById("washingWeight");
+      const rateDisplay = document.getElementById("washingRate");
+
+      const weight = parseFloat(weightInput.value);
+
+      if (!isNaN(weight) && weight > 2.99) {
+        rateDisplay.textContent = "₹45/kg";
+      } else {
+        rateDisplay.textContent = "₹50/kg";
+      }
+
+      // Call existing total calculator if needed
+      if (typeof calculateTotal === "function") {
+        calculateTotal();
+      }
+    }
+  </script>
+
+{% endblock %}

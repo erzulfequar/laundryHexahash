@@ -1,0 +1,13 @@
+{% extends 'laundry/base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h3>Edit Username</h3>
+  <form method="post">{% csrf_token %}
+    <div class="mb-3">
+      <label>New Username</label>
+      <input type="text" name="username" class="form-control" value="{{ request.user.username }}" required>
+    </div>
+    <button class="btn btn-dark">Update</button>
+  </form>
+</div>
+{% endblock %}

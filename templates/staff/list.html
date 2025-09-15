@@ -1,0 +1,55 @@
+{% extends 'laundry/base.html' %}
+{% block content %}
+<div class="container mt-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>All Staff Members</h3>
+
+    <a href="{% url 'add_staff' %}" class="btn btn-dark">
+      <i class="fas fa-user-plus me-1"></i> Add Staff
+    </a>
+
+  </div>
+ {% if request.user.is_superuser or request.user.is_org_admin %}
+  <form method="get" class="simple-branch-filter-form">
+    <label for="branch-select">Filter by Branch:</label>
+    <select name="branch_id" id="branch-select" onchange="this.form.submit()">
+      <option value="all" {% if not selected_branch_id or selected_branch_id == 'all' %}selected{% endif %}>
+        All Branches
+      </option>
+      {% for branch in branches %}
+        <option value="{{ branch.id }}" {% if selected_branch_id == branch.id|stringformat:"s" %}selected{% endif %}>
+          ID: {{ branch.id }} — {{ branch.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+{% endif %}
+</br>
+
+  <table class="table table-bordered table-striped">
+    <thead>
+      <tr>
+        <th>Staff Code</th>
+        <th>Username</th>
+        <th>Branch</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for staff in staffs %}
+      <tr>
+        <td>{{ staff.branch.code }}-{{ staff.code }}</td>
+
+
+        <td>{{ staff.user.username }}</td>
+      <td>{{ staff.branch.name }}</td>
+        <td>{{ staff.created_at|date:"d M Y, h:i A" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4">No staff members found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

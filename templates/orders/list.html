@@ -1,0 +1,118 @@
+{% extends 'laundry/base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h3 class="mb-4">🧺 All Orders</h3>
+{% if request.user.is_superuser or request.user.is_org_admin %}
+  <form method="get" class="simple-branch-filter-form">
+    <label for="branch-select">Filter by Branch:</label>
+    <select name="branch_id" id="branch-select" onchange="this.form.submit()">
+      <option value="all" {% if not selected_branch_id or selected_branch_id == 'all' %}selected{% endif %}>
+        All Branches
+      </option>
+      {% for branch in branches %}
+        <option value="{{ branch.id }}" {% if selected_branch_id == branch.id|stringformat:"s" %}selected{% endif %}>
+          ID: {{ branch.id }} — {{ branch.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+{% endif %}
+
+  <!-- Search & Filter -->
+  <div class="row mb-3">
+<form method="get" class="row g-2 mb-3">
+  <div class="col-md-6">
+    <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Search by Order ID, Name or Phone...">
+  </div>
+    <div class="col-sm-3">
+    <button type="submit" class="btn btn-primary w-50">Search</button>
+  </div>
+  <div class="col-md-3">
+    <select name="status" class="form-select" onchange="this.form.submit()">
+      <option value="">All Statuses</option>
+      <option value="Pending" {% if request.GET.status == 'Pending' %}selected{% endif %}>Pending</option>
+      <option value="Completed" {% if request.GET.status == 'Completed' %}selected{% endif %}>Completed</option>
+    </select>
+  </div>
+
+</form>
+
+  </div>
+
+  <!-- Orders Table -->
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover">
+      <thead class="table-light">
+        <tr>
+          <th>Order ID</th>
+          <th>Customer</th>
+          <th>Phone</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="ordersTable">
+        {% for order in orders %}
+        <tr>
+        <td>{{ order.branch.code }}-LPO{{ order.branch_order_number }}</td>
+
+
+          <td>{{ order.customer.name }}</td>
+          <td>{{ order.customer.phone }}</td>
+          <td>{{ order.created_at|date:"d M Y - h:i A" }}</td>
+          <td>
+            <select class="form-select form-select-sm status-dropdown" data-order-id="{{ order.id }}">
+              <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
+              <option value="Completed" {% if order.status == 'Completed' %}selected{% endif %}>Completed</option>
+            </select>
+          </td>
+          <td>
+            <a href="{% url 'invoice_view' order.id %}" class="btn btn-sm btn-primary">View</a>
+            <a href="{% url 'invoice_view' order.id %}?print=true" class="btn btn-sm btn-secondary">Print</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted">No orders found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+
+
+  // ✅ AJAX status update
+  document.querySelectorAll('.status-dropdown').forEach(function(select) {
+    select.addEventListener('change', function () {
+      const orderId = this.dataset.orderId;
+      const newStatus = this.value;
+
+      fetch(`/orders/update-status/${orderId}/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+      .then(response => {
+        if (!response.ok) throw new Error("Failed to update status.");
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          alert("✅ Status updated.");
+        } else {
+          alert("❌ Failed to update: " + (data.error || ""));
+        }
+      })
+      .catch(err => alert("⚠️ Error: " + err.message));
+    });
+  });
+</script>
+
+{% endblock %}

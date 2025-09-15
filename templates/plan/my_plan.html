@@ -1,0 +1,106 @@
+{% extends 'laundry/base.html' %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+
+        <!-- Premium Header -->
+        <div class="bg-dark text-white px-4 py-4" style="background: linear-gradient(135deg, #1c1c1c, #4b0082);">
+          <h4 class="mb-0"><i class="bi bi-stars me-2"></i>My Plan Overview</h4>
+        </div>
+
+        <div class="card-body p-4 bg-white">
+
+          <!-- Expiry Warning -->
+          {% if remaining_days is not None and remaining_days <= 5 %}
+  <div class="alert border-warning bg-warning-subtle text-dark rounded-4 px-4 py-4 shadow-sm d-flex flex-column flex-md-row align-items-center justify-content-between mb-4" style="animation: pulse 1.5s infinite;">
+    <div class="d-flex align-items-center mb-2 mb-md-0">
+      <i class="bi bi-exclamation-octagon-fill text-warning me-3 fs-2"></i>
+      <div>
+        <h5 class="fw-bold mb-1">⏳ Your Plan is Expiring Soon!</h5>
+        <p class="mb-0">Only <strong>{{ remaining_days }}</strong> day{{ remaining_days|pluralize }} left before access may be restricted.</p>
+      </div>
+    </div>
+    <a href="#" class="btn btn-outline-dark rounded-pill mt-3 mt-md-0 px-4 py-2">
+      <i class="bi bi-box-arrow-up-right me-1"></i> Renew Now
+    </a>
+  </div>
+{% endif %}
+
+          <!-- Plan Info -->
+          <div class="row g-4">
+            <div class="col-md-6">
+              <div class="p-3 border rounded bg-light">
+                <h6 class="fw-semibold text-muted">📅 Start Date</h6>
+                <p class="mb-0">{{ start_date|date:"F j, Y" }}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 border rounded bg-light">
+                <h6 class="fw-semibold text-muted">📅 End Date</h6>
+                <p class="mb-0">{{ end_date|date:"F j, Y" }}</p>
+              </div>
+            </div>
+
+            <!-- Plan Progress -->
+            {% if total_days and days_used is not None %}
+            <div class="col-md-12">
+              <div class="p-3 border rounded bg-light">
+                <h6 class="fw-semibold text-muted">⏳ Plan Usage</h6>
+                <div class="progress" style="height: 24px;">
+                  {% with percent=days_used|divisibleby:total_days|floatformat:0 %}
+                    <div class="progress-bar bg-success" role="progressbar" style="width:{{ percent }}%;" aria-valuenow="{{ days_used }}" aria-valuemin="0" aria-valuemax="{{ total_days }}">
+                      {{ days_used }} / {{ total_days }} days used
+                    </div>
+                  {% endwith %}
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Days Remaining -->
+            <div class="col-md-12">
+              <div class="p-3 border rounded bg-light d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="fw-semibold text-muted">📆 Days Remaining</h6>
+                  <p class="mb-0">
+                    {% if remaining_days is not None %}
+                      <span class="badge bg-primary fs-6">{{ remaining_days }} day{{ remaining_days|pluralize }}</span>
+                    {% else %}
+                      <span class="text-muted">N/A</span>
+                    {% endif %}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Usage Summary -->
+            <div class="col-md-6">
+              <div class="p-3 border rounded bg-light">
+                <h6 class="fw-semibold text-muted">🏢 Branches Allowed</h6>
+                <p class="mb-0 text-primary fs-5">{{ branches_used }} / {{ branches_allowed }}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 border rounded bg-light">
+                <h6 class="fw-semibold text-muted">👥 Staff Allowed</h6>
+                <p class="mb-0 text-primary fs-5">{{ staff_used }} / {{ staff_allowed }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upgrade Button -->
+          <div class="text-center mt-4">
+            <a href="#" class="btn btn-outline-dark rounded-pill px-4 py-2">
+              <i class="bi bi-box-arrow-up-right me-1"></i> Upgrade Plan
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'laundry/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>{% if edit_mode %}Edit Article{% else %}Add New Article{% endif %}</h2>
+
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Article Name -->
+    <div class="mb-3">
+      <label for="id_name" class="form-label">Article Name</label>
+      <input type="text" name="name" maxlength="100" class="form-control" id="id_name"
+             value="{{ form.instance.name|default_if_none:'' }}" required>
+    </div>
+
+    <!-- Category -->
+    <div class="mb-3">
+      <label for="id_category" class="form-label">Category</label>
+      <select name="category" id="id_category" class="form-select" required>
+        <option value="" disabled {% if not form.instance.category %}selected{% endif %}>Select Category</option>
+        <option value="Boys" {% if form.instance.category == 'Boys' %}selected{% endif %}>Boys</option>
+        <option value="Girls" {% if form.instance.category == 'Girls' %}selected{% endif %}>Girls</option>
+        <option value="Kids" {% if form.instance.category == 'Kids' %}selected{% endif %}>Kids</option>
+        <option value="Others" {% if form.instance.category == 'Others' %}selected{% endif %}>Others</option>
+      </select>
+    </div>
+
+    <!-- Only Iron Price -->
+    <div class="mb-3">
+      <label for="id_only_iron_price" class="form-label">Ironing Only Price (₹)</label>
+      <input type="number" name="only_iron_price" step="0.01" min="0" class="form-control" id="id_only_iron_price"
+             value="{{ form.instance.only_iron_price|default_if_none:'' }}" required>
+    </div>
+
+    <!-- With Wash Price -->
+    <div class="mb-3">
+      <label for="id_with_wash_price" class="form-label">Ironing with Wash Price (₹)</label>
+      <input type="number" name="with_wash_price" step="0.01" min="0" class="form-control" id="id_with_wash_price"
+             value="{{ form.instance.with_wash_price|default_if_none:'' }}" required>
+    </div>
+<div class="mb-3">
+  <label for="id_dry_clean_price" class="form-label">Dry Clean Price (₹)</label>
+  <input type="number" name="dry_clean_price" step="0.01" min="0" class="form-control" id="id_dry_clean_price"
+         value="{{ form.instance.dry_clean_price|default_if_none:'' }}">
+</div>
+
+
+
+
+    <!-- Image Upload -->
+    <div class="mb-3">
+      <label for="id_image" class="form-label">Article Image</label>
+      <input type="file" name="image" accept="image/*" class="form-control" id="id_image">
+      {% if form.instance.image %}
+        <div class="mt-2">
+          <strong>Current Image:</strong><br>
+          <img src="{{ form.instance.image.url }}" alt="Current Image" width="100">
+        </div>
+      {% endif %}
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+      {% if edit_mode %}Update Article{% else %}Add Article{% endif %}
+    </button>
+  </form>
+</div>
+{% endblock %}

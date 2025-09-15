@@ -1,0 +1,33 @@
+{% extends 'laundry/base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>All Branches</h3>
+    <a href="{% url 'branch_add' %}" class="btn btn-primary">+ Add Branch</a>
+  </div>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Branch Code</th>
+        <th>Branch Name</th>
+        <th>Address</th>
+        <th>Branch Phone No.</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for branch in branches %}
+      <tr>
+        <td>{{ branch.code }}</td>
+        <td>{{ branch.name }}</td>
+        <td>{{ branch.address }}</td>
+        <td>{{ branch.phone|default:"N/A" }}</td>
+        <td>{{ branch.created_at|date:"d M Y" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4">No branches yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

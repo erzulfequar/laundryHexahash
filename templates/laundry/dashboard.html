@@ -1,0 +1,590 @@
+{% extends 'laundry/base.html' %}
+
+{% block content %}
+{% load custom_filters %}
+
+<h3 class="mb-4 fw-bold">Dashboard</h3>
+<div class="row">
+{% if request.user.is_superuser or request.user.is_org_admin %}
+
+  <div class="col-sm-9">
+  <div class="branch-filter-wrapper-upgraded">
+    <div class="d-flex justify-content-between flex-wrap align-items-center gap-3">
+      <!-- Left side: Form -->
+      <form method="get" class="branch-filter-form-upgraded m-0">
+        <h2>🎯 Filter Dashboard by Branch</h2>
+        <div class="filter-flex">
+          <label for="branch-select">📌 Select Branch:</label>
+          <select name="branch_id" id="branch-select" onchange="this.form.submit()">
+            <option value="all" {% if not selected_branch_id or selected_branch_id == 'all' %}selected{% endif %}>
+              🌍 All Branches
+            </option>
+            {% for branch in branches %}
+              <option value="{{ branch.id }}" {% if selected_branch_id == branch.id|stringformat:"s" %}selected{% endif %}>
+                🏢 ID: {{ branch.id }} — {{ branch.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </form>
+      </div>
+    </div>
+      <!-- Right side: Download Button -->
+</div>
+<div class="col-sm-3">
+   <div class="text-end">
+      <a href="{% url 'export_dashboard_excel' %}?branch_id={{ selected_branch_id|default:"all" }}" class="btn btn-dark px-4 py-2 fw-bold rounded-3 shadow-sm">
+  📊 Download Excel Summary
+</a>
+  </div>
+  </div>
+</div>
+
+
+  <style>
+    .branch-filter-wrapper-upgraded {
+      background: linear-gradient(135deg, #f7971e, #ffd200);
+      padding: 24px 32px;
+      border-radius: 18px;
+      color: #fff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      margin-bottom: 35px;
+      max-width: 700px;
+      width: 100%;
+      animation: popFade 0.5s ease-in-out;
+      border: 2px solid #fff;
+    }
+
+    .branch-filter-form-upgraded h2 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 18px;
+      color: #ffffff;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.15);
+    }
+
+    .filter-flex {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filter-flex label {
+      font-size: 18px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .filter-flex select {
+      padding: 12px 18px;
+      font-size: 16px;
+      border-radius: 12px;
+      border: none;
+      background: #ffffff;
+      color: #333;
+      font-weight: 600;
+      min-width: 280px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+    }
+
+    .filter-flex select:hover {
+      transform: scale(1.03);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+
+    .filter-flex select:focus {
+      outline: none;
+      border: 2px solid #ff9900;
+      box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.4);
+    }
+
+    @keyframes popFade {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+{% endif %}
+
+
+<!-- Lifetime Stat Boxes -->
+<div class="row g-4 mb-4">
+  <div class="col-md-3 col-sm-6">
+    <div class="card shadow-sm p-3 border-0">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-layer-group fa-2x text-primary me-3"></i>
+        <div>
+          <h6 class="mb-1">Total Orders</h6>
+          <h5 class="fw-bold mb-0">{{ total_orders }}</h5>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <div class="card shadow-sm p-3 border-0">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-tasks fa-2x text-warning me-3"></i>
+        <div>
+          <h6 class="mb-1">In Progress</h6>
+          <h5 class="fw-bold mb-0">{{ in_progress_orders }}</h5>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <div class="card shadow-sm p-3 border-0">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-check-double fa-2x text-success me-3"></i>
+        <div>
+          <h6 class="mb-1">Completed</h6>
+          <h5 class="fw-bold mb-0">{{ total_completed_orders }}</h5>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <div class="card shadow-sm p-3 border-0">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-rupee-sign fa-2x text-info me-3"></i>
+        <div>
+          <h6 class="mb-1">Revenue</h6>
+          <h5 class="fw-bold mb-0">₹{{ lifetime_revenue }}</h5>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Today's Stat Boxes -->
+<div class="row g-4 mb-4">
+  <div class="col-md-3 col-sm-6">
+    <div class="card shadow-sm p-3 border-0">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-calendar-day fa-2x text-primary me-3"></i>
+        <div>
+          <h6 class="mb-1">Today's Orders</h6>
+          <h5 class="fw-bold mb-0">{{ todays_orders }}</h5>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <div class="card shadow-sm p-3 border-0">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-spinner fa-2x text-warning me-3"></i>
+        <div>
+          <h6 class="mb-1">Pending Orders</h6>
+          <h5 class="fw-bold mb-0">{{ pending_orders }}</h5>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <div class="card shadow-sm p-3 border-0">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-check-circle fa-2x text-success me-3"></i>
+        <div>
+          <h6 class="mb-1">Completed Orders</h6>
+          <h5 class="fw-bold mb-0">{{ completed_orders }}</h5>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <div class="card shadow-sm p-3 border-0">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-rupee-sign fa-2x text-info me-3"></i>
+        <div>
+          <h6 class="mb-1">Total Revenue</h6>
+          <h5 class="fw-bold mb-0">₹{{ total_revenue }}</h5>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Order Count Charts -->
+<div class="row g-4 mb-4">
+  <!-- Weekly Orders -->
+<div class="col-md-4">
+  <div class="card p-3 shadow-sm">
+    <div class="d-flex justify-content-between align-items-center">
+      <h6 class="fw-bold mb-3">Weekly Orders</h6>
+      <button class="btn btn-sm btn-outline-primary" id="weekly-toggle-btn" onclick="toggleView('weekly')">
+        Table View
+      </button>
+    </div>
+
+    <!-- Chart -->
+    <div id="weekly-chart-container">
+      <canvas id="weeklyOrderChart"></canvas>
+    </div>
+
+    <!-- Table -->
+    <div id="weekly-table-container" style="display: none;" class="mt-3">
+      <table class="table table-sm table-bordered">
+        <thead>
+          <tr><th>Day</th><th>Orders</th></tr>
+        </thead>
+        <tbody>
+          {% for day, count in weekly_orders_data.items %}
+          <tr>
+            <td>{{ day }}</td>
+            <td>{{ count }}</td>
+          </tr>
+
+
+          {% endfor %}
+                              <tr class="fw-bold">
+  <td>Total</td>
+  <td>
+    {{ weekly_orders_data.values|sum_list }}
+  </td>
+</tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+
+  <!-- Monthly Orders -->
+  <div class="col-md-4">
+    <div class="card p-3 shadow-sm">
+      <div class="d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-3">Monthly Orders</h6>
+        <button class="btn btn-sm btn-outline-primary" id="monthly-toggle-btn" onclick="toggleView('monthly')">Table View</button>
+      </div>
+
+      <div id="monthly-chart-container">
+        <canvas id="monthlyOrderChart"></canvas>
+      </div>
+
+      <div id="monthly-table-container" style="display: none;" class="mt-3">
+        <table class="table table-sm table-bordered">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Orders</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for month, count in monthly_orders_data.items %}
+            <tr>
+              <td>{{ month }}</td>
+              <td>{{ count }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="fw-bold">
+    <td>Total</td>
+    <td>{{ monthly_orders_data.values|sum_list }}</td>
+  </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Yearly Orders -->
+  <div class="col-md-4">
+    <div class="card p-3 shadow-sm">
+      <div class="d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-3">Yearly Orders</h6>
+        <button class="btn btn-sm btn-outline-primary" id="yearly-toggle-btn"  onclick="toggleView('yearly')">Table View</button>
+      </div>
+
+      <div id="yearly-chart-container">
+        <canvas id="yearlyOrderChart"></canvas>
+      </div>
+
+      <div id="yearly-table-container" style="display: none;" class="mt-3">
+        <table class="table table-sm table-bordered">
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Orders</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for year, count in yearly_orders_data.items %}
+            <tr>
+              <td>{{ year }}</td>
+              <td>{{ count }}</td>
+            </tr>
+
+            {% endfor %}
+           <tr class="fw-bold">
+    <td>Total</td>
+    <td> {{ yearly_orders_data.values|sum_list }}</td>
+  </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  function toggleView(type) {
+    const chart = document.getElementById(`${type}-chart-container`);
+    const table = document.getElementById(`${type}-table-container`);
+    const button = document.getElementById(`${type}-toggle-btn`);
+
+    if (chart.style.display === "none") {
+      // Table is currently shown → switch to chart
+      chart.style.display = "block";
+      table.style.display = "none";
+      button.textContent = "Table View";
+    } else {
+      // Chart is currently shown → switch to table
+      chart.style.display = "none";
+      table.style.display = "block";
+      button.textContent = "Bar View";
+    }
+  }
+</script>
+
+
+
+
+
+<!-- CHARTS (Bar & Table Toggle View) -->
+
+<div class="row g-4 mb-4">
+  {% load custom_filters %}
+  {% for chart in charts_data %}
+    <div class="col-md-4">
+      <div class="card p-3 shadow-sm">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0">{{ chart.title }}</h6>
+          <button class="btn btn-sm btn-outline-primary toggle-view" data-target="{{ chart.id }}">
+            Table View
+          </button>
+        </div>
+
+        <!-- Chart -->
+        <canvas id="{{ chart.id }}Chart" class="chart-view"
+                data-labels='{{ chart.labels|safe }}'
+                data-values='{{ chart.data|safe }}'></canvas>
+
+        <!-- Table -->
+        <div class="table-responsive table-view d-none mt-3" id="{{ chart.id }}TableWrapper">
+          <table class="table table-sm table-bordered">
+            <thead>
+              <tr>
+                <th>Label</th>
+                <th>Revenue (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for label, value in chart.labels|zip:chart.data %}
+              <tr>
+                <td>{{ label }}</td>
+                <td>{{ value }}</td>
+              </tr>
+              {% endfor %}
+       <tr class="fw-bold bg-light">
+  <td>Total</td>
+  <td>{{ chart.data|sum_list }}</td>
+</tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".toggle-view").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const target = this.dataset.target;
+        const chart = document.getElementById(target + "Chart");
+        const table = document.getElementById(target + "TableWrapper");
+
+        chart.classList.toggle("d-none");
+        table.classList.toggle("d-none");
+
+        this.textContent = chart.classList.contains("d-none") ? "Bar View" : "Table View";
+      });
+    });
+  });
+</script>
+{% endblock %}
+
+
+
+
+
+<!-- Top Customers -->
+<div class="card p-4 shadow-sm">
+  <h6 class="fw-bold mb-3">Top Customers</h6>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Total Spent</th>
+        <th>Total Orders</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for customer in top_customers %}
+      <tr>
+        <td>{{ customer.name }}</td>
+        <td>{{ customer.phone }}</td>
+        <td>₹{{ customer.total_spent }}</td>
+        <td>{{ customer.total_orders }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Chart.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const weeklyChart = new Chart(document.getElementById('weeklyChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ weekly_labels|safe }},
+      datasets: [{
+        label: '₹',
+        data: {{ weekly_data|safe }},
+        backgroundColor: '#4e73df'
+      }]
+    },
+    options: { responsive: true }
+  });
+
+  const monthlyChart = new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ monthly_labels|safe }},
+      datasets: [{
+        label: '₹',
+        data: {{ monthly_data|safe }},
+        backgroundColor: '#1cc88a'
+      }]
+    },
+    options: { responsive: true }
+  });
+
+  const yearlyChart = new Chart(document.getElementById('yearlyChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ yearly_labels|safe }},
+      datasets: [{
+        label: '₹',
+        data: {{ yearly_data|safe }},
+        backgroundColor: '#36b9cc'
+      }]
+    },
+    options: { responsive: true }
+  });
+
+  // Fullscreen Modal View on Chart Click
+  document.querySelectorAll('.chart-click').forEach(card => {
+    card.addEventListener('click', function() {
+      const title = this.dataset.title;
+      const labels = JSON.parse(this.dataset.labels);
+      const values = JSON.parse(this.dataset.values);
+
+      const modalHtml = `
+        <div class="modal fade" id="chartModal" tabindex="-1">
+          <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">${title}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <canvas id="modalChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const modal = new bootstrap.Modal(document.getElementById('chartModal'));
+      modal.show();
+
+      new Chart(document.getElementById('modalChart'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '₹',
+            data: values,
+            backgroundColor: '#17a2b8'
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+
+      document.getElementById('chartModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('chartModal').remove();
+      });
+    });
+  });
+   // Order Charts
+  new Chart(document.getElementById('weeklyOrderChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ weekly_order_labels|safe }},
+      datasets: [{
+        label: 'Orders',
+        data: {{ weekly_order_data|safe }},
+        backgroundColor: '#f6c23e'
+      }]
+    },
+    options: { responsive: true }
+  });
+
+  new Chart(document.getElementById('monthlyOrderChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ monthly_order_labels|safe }},
+      datasets: [{
+        label: 'Orders',
+        data: {{ monthly_order_data|safe }},
+        backgroundColor: '#e74a3b'
+      }]
+    },
+    options: { responsive: true }
+  });
+
+  new Chart(document.getElementById('yearlyOrderChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ yearly_order_labels|safe }},
+      datasets: [{
+        label: 'Orders',
+        data: {{ yearly_order_data|safe }},
+        backgroundColor: '#36b9cc'
+      }]
+    },
+    options: { responsive: true }
+  });
+
+</script>
+
+{% endblock %}

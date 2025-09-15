@@ -1,0 +1,100 @@
+/* base.html css start */
+/* Sidebar nav icon alignment fix */
+.sidebar .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;           /* Ensures consistent spacing */
+  font-size: 1rem;
+  color: #007bff;
+  padding: 8px 12px;
+  transition: 0.2s;
+}
+
+.sidebar .nav-link i {
+  font-size: 1.2rem;
+  width: 20px;
+  text-align: center;
+}
+
+.sidebar .nav-link:hover {
+  background-color: #e9ecef;
+  color: #0056b3;
+  border-radius: 6px;
+}
+
+
+/* Sticky top navbar */
+.navbar.d-md-flex {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  z-index: 1040;
+  background-color: #fff;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* Sidebar sticky */
+.sidebar {
+  position: fixed;
+  top: 60px; /* Below navbar */
+  left: 0;
+  width: 200px;
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+  background-color: #f8f9fa;
+  z-index: 1030;
+  border-right: 1px solid #dee2e6;
+}
+
+/* Main content layout adjustment */
+main {
+  margin-left: 200px;
+  margin-top: 60px;
+  padding: 1rem 2rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+  .sidebar {
+    position: static;
+    height: auto;
+    width: 100%;
+    border-right: none;
+  }
+
+  main {
+    margin: 0;
+    padding: 1rem;
+  }
+}
+
+/* base.html css end */
+
+
+/* dashboard.html css start */
+.card {
+  border-radius: 12px;
+  transition: 0.2s ease-in-out;
+}
+
+.card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.card h5 {
+  font-size: 1.4rem;
+}
+/* dashboard.html css end */
+
+/* order summary css start */
+.order {
+  color: green;
+  font-weight: bold;
+}
+/* order summary css end */
+main {
+  padding-top: 60px; /* Adjust this as per your navbar height */
+}

@@ -1,0 +1,52 @@
+{% extends 'laundry/base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h3>Add New Staff</h3>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="row">
+
+      <div class="col-md-6 mb-3">
+        <label for="id_username">Username</label>
+        <input type="text" name="username" id="id_username" class="form-control" required>
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label for="id_full_name">Full Name</label>
+        <input type="text" name="full_name" id="id_full_name" class="form-control" required>
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label for="id_email">Email</label>
+        <input type="email" name="email" id="id_email" class="form-control" required>
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label for="id_phone">Mobile Number</label>
+        <input type="tel" name="phone" id="id_phone" class="form-control" pattern="[0-9]{10}" maxlength="10" required
+               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,10)">
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label for="id_password">Password</label>
+        <input type="password" name="password" id="id_password" class="form-control" required>
+      </div>
+
+      <!-- Replace Aadhaar with Branch Dropdown -->
+      <div class="col-md-6 mb-3">
+        <label for="id_branch">Select Branch</label>
+        <select name="branch" id="id_branch" class="form-control" required>
+          <option value="" selected disabled>-- Select Branch --</option>
+          {% for branch in branches %}
+            <option value="{{ branch.id }}">{{ branch.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+    </div>
+
+    <button class="btn btn-dark mt-3">Create Staff</button>
+  </form>
+</div>
+{% endblock %}
