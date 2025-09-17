@@ -19,8 +19,8 @@ from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
-# from openpyxl import Workbook
-# from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from django.db.models.functions import ExtractYear
 from django.http import HttpResponseNotFound
 from datetime import datetime
